@@ -25,13 +25,15 @@ object RedditTest extends TestSuite {
       assert(response.text().contains("Test Message!"))
       assert(response.statusCode == 200)
     }
-    /*test("failure") - withServer(RedditApplication) { host =>
+    test("failure") - withServer(RedditApplication) { host =>
       val response1 = requests.post(host, data = Map("name" -> "ilya"), check = false)
       assert(response1.statusCode == 400)
       val response2 = requests.post(host, data = Map("name" -> "ilya", "msg" -> ""))
       assert(response2.text().contains("Message cannot be empty"))
       val response3 = requests.post(host, data = Map("name" -> "", "msg" -> "Test Message!"))
       assert(response3.text().contains("Name cannot be empty"))
-    }*/
+      val response4 = requests.post(host, data = Map("name" -> "123#123", "msg" -> "Test Message!"))
+      assert(response4.text().contains("Username cannot contain '#'"))
+    }
   }
 }
