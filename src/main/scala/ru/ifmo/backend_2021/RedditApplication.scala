@@ -1,6 +1,9 @@
 package ru.ifmo.backend_2021
 
+import cask.endpoints.WsHandler
+import cask.util.Ws
 import ru.ifmo.backend_2021.ApplicationUtils.Document
+import ru.ifmo.backend_2021.connections.{ConnectionPool, WsConnectionPool}
 import ru.ifmo.backend_2021.pseudodb.{MessageDB, PseudoDB}
 import scalatags.Text.all._
 import scalatags.generic
@@ -9,6 +12,7 @@ import scalatags.text.Builder
 object RedditApplication extends cask.MainRoutes {
   val serverUrl = s"http://$host:$port"
   val db: MessageDB = PseudoDB(s"db.txt", clean = true)
+  val connectionPool: ConnectionPool = WsConnectionPool()
 
   @cask.staticResources("/static")
   def staticResourceRoutes() = "static"
@@ -43,10 +47,16 @@ object RedditApplication extends cask.MainRoutes {
     if (name == "") ujson.Obj("success" -> false, "err" -> "Name cannot be empty")
     else if (msg == "") ujson.Obj("success" -> false, "err" -> "Message cannot be empty")
     else if (name.contains("#")) ujson.Obj("success" -> false, "err" -> "Username cannot contain '#'")
-    else {
+    else synchronized {
       db.addMessage(Message(name, msg))
+      connectionPool.sendAll(Ws.Text(messageList().render))
       ujson.Obj("success" -> true, "err" -> "", "txt" -> messageList().render)
     }
+  }
+
+  @cask.websocket("/subscribe")
+  def subscribe(): WsHandler = connectionPool.wsHandler { connection =>
+    connectionPool.send(Ws.Text(messageList().render))(connection)
   }
 
   log.debug(s"Starting at $serverUrl")
