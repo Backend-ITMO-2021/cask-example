@@ -2,39 +2,32 @@ package ru.ifmo.backend_2021
 
 import ru.ifmo.backend_2021.ApplicationUtils.Document
 import ru.ifmo.backend_2021.pseudodb.{MessageDB, PseudoDB}
-import scalatags.Text
 import scalatags.Text.all._
+import scalatags.generic
+import scalatags.text.Builder
 
 object RedditApplication extends cask.MainRoutes {
   val serverUrl = s"http://$host:$port"
   val db: MessageDB = PseudoDB(s"db.txt", clean = true)
 
+  @cask.staticResources("/static")
+  def staticResourceRoutes() = "static"
+
   @cask.get("/")
-  def hello(
-    errorOpt: Option[String] = None,
-    userName: Option[String] = None,
-    msg: Option[String] = None
-  ): Document = doctype("html")(
+  def hello(): Document = doctype("html")(
     html(
-      head(link(rel := "stylesheet", href := ApplicationUtils.styles)),
+      head(
+        link(rel := "stylesheet", href := ApplicationUtils.styles),
+        script(src := "/static/app.js")
+      ),
       body(
         div(cls := "container")(
           h1("Reddit: Swain is mad :("),
-          div(for (Message(name, msg) <- db.getState) yield p(b(name), " ", msg)),
-          for (error <- errorOpt) yield i(color.red)(error),
-          form(action := "/", method := "post")(
-            input(
-              `type` := "text",
-              name := "name",
-              placeholder := "Username",
-              userName.map(value := _)
-            ),
-            input(
-              `type` := "text",
-              name := "msg",
-              placeholder := "Write a message!",
-              msg.map(value := _)
-            ),
+          div(id := "messageList")(messageList()),
+          div(id := "errorDiv", color.red),
+          form(onsubmit := "return submitForm()")(
+            input(`type` := "text", id := "nameInput", placeholder := "Username"),
+            input(`type` := "text", id := "msgInput", placeholder := "Write a message!"),
             input(`type` := "submit", value := "Send"),
           )
         )
@@ -42,15 +35,17 @@ object RedditApplication extends cask.MainRoutes {
     )
   )
 
-  @cask.postForm("/")
-  def postChatMsg(name: String, msg: String): Text.all.doctype = {
+  def messageList(): generic.Frag[Builder, String] = frag(for (Message(name, msg) <- db.getState) yield p(b(name), " ", msg))
+
+  @cask.postJson("/")
+  def postChatMsg(name: String, msg: String): ujson.Obj = {
     log.debug(name, msg)
-    if (name == "") hello(Some("Name cannot be empty"), Some(name), Some(msg))
-    else if (msg == "") hello(Some("Message cannot be empty"), Some(name), Some(msg))
-    else if (name.contains("#")) hello(Some("Username cannot contain '#'"), Some(name), Some(msg))
+    if (name == "") ujson.Obj("success" -> false, "err" -> "Name cannot be empty")
+    else if (msg == "") ujson.Obj("success" -> false, "err" -> "Message cannot be empty")
+    else if (name.contains("#")) ujson.Obj("success" -> false, "err" -> "Username cannot contain '#'")
     else {
       db.addMessage(Message(name, msg))
-      hello(None, Some(name), None)
+      ujson.Obj("success" -> true, "err" -> "", "txt" -> messageList().render)
     }
   }
 
