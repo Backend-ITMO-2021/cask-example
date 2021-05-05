@@ -50,7 +50,7 @@ object RedditApplication extends cask.MainRoutes {
     else synchronized {
       db.addMessage(Message(name, msg))
       connectionPool.sendAll(Ws.Text(messageList().render))
-      ujson.Obj("success" -> true, "err" -> "", "txt" -> messageList().render)
+      ujson.Obj("success" -> true, "err" -> "")
     }
   }
 
