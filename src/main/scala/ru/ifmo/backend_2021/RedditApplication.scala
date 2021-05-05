@@ -39,7 +39,7 @@ object RedditApplication extends cask.MainRoutes {
     )
   )
 
-  def messageList(): generic.Frag[Builder, String] = frag(for (Message(name, msg) <- db.getState) yield p(b(name), " ", msg))
+  def messageList(): generic.Frag[Builder, String] = frag(for (Message(name, msg) <- db.getMessages) yield p(b(name), " ", msg))
 
   @cask.postJson("/")
   def postChatMsg(name: String, msg: String): ujson.Obj = {
