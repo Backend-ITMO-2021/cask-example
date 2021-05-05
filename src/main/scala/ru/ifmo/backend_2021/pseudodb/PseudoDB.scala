@@ -33,7 +33,7 @@ class PseudoDB(filename: String) extends MessageDB {
     }
   }
 
-  def getState: List[Message] = {
+  def getMessages: List[Message] = {
     createIfNotExists()
     FileUtils.withFileReader[List[Message]](filename)(_.map(Message(_)))
   }
