@@ -39,7 +39,12 @@ object RedditApplication extends cask.MainRoutes {
     )
   )
 
-  def messageList(): generic.Frag[Builder, String] = frag(for (Message(name, msg) <- db.getState) yield p(b(name), " ", msg))
+  def messageList(): generic.Frag[Builder, String] = frag(for (Message(name, msg) <- db.getMessages) yield p(b(name), " ", msg))
+
+  @cask.websocket("/subscribe")
+  def subscribe(): WsHandler = connectionPool.wsHandler { connection =>
+    connectionPool.send(Ws.Text(messageList().render))(connection)
+  }
 
   @cask.postJson("/")
   def postChatMsg(name: String, msg: String): ujson.Obj = {
@@ -50,13 +55,8 @@ object RedditApplication extends cask.MainRoutes {
     else synchronized {
       db.addMessage(Message(name, msg))
       connectionPool.sendAll(Ws.Text(messageList().render))
-      ujson.Obj("success" -> true, "err" -> "", "txt" -> messageList().render)
+      ujson.Obj("success" -> true, "err" -> "")
     }
-  }
-
-  @cask.websocket("/subscribe")
-  def subscribe(): WsHandler = connectionPool.wsHandler { connection =>
-    connectionPool.send(Ws.Text(messageList().render))(connection)
   }
 
   log.debug(s"Starting at $serverUrl")
