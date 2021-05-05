@@ -16,7 +16,7 @@ object RedditApplication extends cask.MainRoutes {
       body(
         div(cls := "container")(
           h1("Reddit: Swain is mad :("),
-          div(for (Message(name, msg) <- db.getState) yield p(b(name), " ", msg)),
+          div(for (Message(name, msg) <- db.getMessages) yield p(b(name), " ", msg)),
           form(action := "/", method := "post")(
             input(
               `type` := "text",
